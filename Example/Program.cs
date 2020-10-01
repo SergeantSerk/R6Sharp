@@ -1,35 +1,25 @@
-﻿using R6Sharp;
-using R6Sharp.Endpoint;
+﻿using R6DataAccess.Interfaces;
+using R6DataAccess.Models;
+using R6Sharp;
 using R6Sharp.Response;
 using R6Sharp.Response.Static;
-using R6Sharp.Response.Statistic;
 using System;
-using System.Collections.Generic;
 using System.IO;
 using System.Text;
 using System.Text.Json;
-using System.Text.Json.Serialization;
+using System.Threading.Tasks;
 
 namespace Example
 {
     public static class Program
     {
-        internal class Credential
-        {
-            [JsonPropertyName("email")]
-            public string Email { get; set; }
 
-            [JsonPropertyName("password")]
-            public string Password { get; set; }
-        }
-
-        public static void Main()
+        public static void  Main()
         {
-            Console.OutputEncoding = Encoding.UTF8;
-            // credentials.json = {"email": "email@email.com", "password": "somepassword"}
-            var json = File.ReadAllText(@"credentials.json");
-            var credentials = JsonSerializer.Deserialize<Credential>(json);
-            var api = new R6Api(credentials.Email, credentials.Password);
+          
+
+            var api = new R6Api(new Auth ("email", "password", false));
+
 
             var guids = new[]
             {
@@ -41,28 +31,30 @@ namespace Example
             };
 
             #region Player Data
-            var username = "Pseudosin";
-            var platform = Platform.Uplay;
+            var username = Guid.Parse("0a32319d-f7de-4ec1-a845-25ee53f978a7");
+            IPlatform platform = Platform.UPLAY;
             var region = Region.EMEA;
 
-            Profile profile = api.Profile.GetProfileAsync(username, platform).Result;
+            IProfile profile = api.Profile.GetProfileAsync(username, platform).Result;
+
             // var profile = api.GetProfileAsync(guids, platform).Result;
             Console.WriteLine($"Profile ID:         {profile.UserId}");
 
-            PlayerProgression progression = api.PlayerProgression.GetPlayerProgressionAsync(profile.ProfileId, platform).Result;
+            IPlayerProgression progression = api.PlayerProgression.GetPlayerProgressionAsync(profile.ProfileId, platform).Result;
             Console.WriteLine($"Level:              {progression.Level}");
 
-            Dictionary<string, BoardInfo> ranked = api.Player.GetRankedAsync(profile.ProfileId, platform, region).Result;
-            Console.WriteLine($"Ranked Rank:        {ranked[progression.ProfileId.ToString()].Rank}");
 
-            Dictionary<string, BoardInfo> casual = api.Player.GetCasualAsync(profile.ProfileId, platform, region).Result;
-            Console.WriteLine($"Casual Rank:        {casual[progression.ProfileId.ToString()].Rank}");
+            IBoardInfo ranked = api.Player.GetRankedAsync(profile.ProfileId, platform, region).Result;
+            Console.WriteLine($"Ranked Rank:        {ranked.Rank}");
 
-            EquipmentStatistic equipments = api.Statistic.GetEquipmentStatistics(profile.ProfileId, Platform.Uplay).Result;
-            GamemodeStatistic gamemodes = api.Statistic.GetGamemodeStatistics(profile.ProfileId, Platform.Uplay).Result;
-            OperatorStatistic operators = api.Statistic.GetOperatorStatistics(profile.ProfileId, Platform.Uplay).Result;
-            QueueStatistic queues = api.Statistic.GetQueueStatistics(profile.ProfileId, Platform.Uplay).Result;
-            TerroristHuntMissionStatistic terroristhuntmissions = api.Statistic.GetTerroristHuntMissionsStatistics(profile.ProfileId, Platform.Uplay).Result;
+            IBoardInfo casual = api.Player.GetCasualAsync(profile.ProfileId, platform, region).Result;
+            Console.WriteLine($"Casual Rank:        {casual.Rank}");
+
+            IEquipmentStatistic equipments = api.Statistic.GetEquipmentStatistics(profile.ProfileId, platform).Result;
+            IGamemodeStatistic gamemodes = api.Statistic.GetGamemodeStatistics(profile.ProfileId, platform).Result;
+            IOperatorStatistic operators = api.Statistic.GetOperatorStatistics(profile.ProfileId, platform).Result;
+            IQueueStatistic queues = api.Statistic.GetQueueStatistics(profile.ProfileId, platform).Result;
+            ITerroristHuntMissionStatistic terroristhuntmissions = api.Statistic.GetTerroristHuntMissionsStatistics(profile.ProfileId, platform).Result;
             #endregion
 
             #region Static Data
@@ -73,8 +65,8 @@ namespace Example
             // Season season = Season.GetSeasonAsync().Result;
             Console.WriteLine($"Current Season:     {season.Id}");
 
-            Dictionary<string, string> locales = api.Static.GetLocaleAsync(Language.BritishEnglish).Result;
-            List<SeasonDetail> seasonDetails = api.Static.GetSeasonDetailsAsync().Result;
+            var locales = api.Static.GetLocaleAsync(LanguageEndPoint.BritishEnglish).Result;
+            var seasonDetails = api.Static.GetSeasonDetailsAsync().Result;
 
             var seasonId = 18;
             // Find season details for season 18
@@ -87,5 +79,6 @@ namespace Example
             Console.WriteLine($"Highest Rank URL:   {highestSeasonRank.Images.Hd}");
             #endregion
         }
+
     }
 }
