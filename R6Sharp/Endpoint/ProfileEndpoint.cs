@@ -15,6 +15,22 @@ namespace R6Sharp.Endpoint
             _sessionHandler = sessionHandler;
         }
 
+        /// <inheritdoc/>
+        public async Task<Profile> GetProfileAsync(string player, Platform platform)
+        {
+            var profiles = await GetProfileAsync(new string[] { player }, platform).ConfigureAwait(false);
+            // the search result could contain more than one result, return first anyways
+            return profiles.Count > 0 ? profiles[0] : null;
+        }
+
+        /// <inheritdoc/>
+        public async Task<Profile> GetProfileAsync(Guid uuid)
+        {
+            var profiles = await GetProfileAsync(new Guid[] { uuid }).ConfigureAwait(false);
+            // the search result could contain more than one result, return first anyways
+            return profiles.Count > 0 ? profiles[0] : null;
+        }
+
         /// <summary>
         /// Search for a player on Rainbow 6 Siege.
         /// </summary>
@@ -49,7 +65,7 @@ namespace R6Sharp.Endpoint
                 .AddQueryParameter("namesOnPlatform", string.Join(',', players))
                 .AddQueryParameter("platformType", Constant.PlatformToString(platform));
 
-            ProfileSearch profileSearch = await EndpointHelper
+            ProfileSearch profileSearch = await ApiHelper
                 .BuildRestClient(session)
                 .GetAsync<ProfileSearch>(restRequest);
             return profileSearch.Profiles;
@@ -63,26 +79,10 @@ namespace R6Sharp.Endpoint
             var restRequest = new RestRequest(endpoint, Method.Get)
                 .AddQueryParameter("profileIds", string.Join(',', uuids));
 
-            ProfileSearch profileSearch = await EndpointHelper
+            ProfileSearch profileSearch = await ApiHelper
                 .BuildRestClient(session)
                 .GetAsync<ProfileSearch>(restRequest);
             return profileSearch.Profiles;
-        }
-
-        /// <inheritdoc/>
-        public async Task<Profile> GetProfileAsync(string player, Platform platform)
-        {
-            var profiles = await GetProfileAsync(new string[] { player }, platform).ConfigureAwait(false);
-            // the search result could contain more than one result, return first anyways
-            return profiles.Count > 0 ? profiles[0] : null;
-        }
-
-        /// <inheritdoc/>
-        public async Task<Profile> GetProfileAsync(Guid uuid)
-        {
-            var profiles = await GetProfileAsync(new Guid[] { uuid }).ConfigureAwait(false);
-            // the search result could contain more than one result, return first anyways
-            return profiles.Count > 0 ? profiles[0] : null;
         }
     }
 }

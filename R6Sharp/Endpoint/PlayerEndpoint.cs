@@ -146,7 +146,7 @@ namespace R6Sharp.Endpoint
                 .AddQueryParameter("region_id", Constant.RegionToString(region))
                 .AddQueryParameter("season_id", season.ToString());
 
-            BoardInfoFetch boardInfoFetch = await EndpointHelper
+            BoardInfoFetch boardInfoFetch = await ApiHelper
                 .BuildRestClient(session)
                 .GetAsync<BoardInfoFetch>(restRequest);
             return boardInfoFetch.Players;

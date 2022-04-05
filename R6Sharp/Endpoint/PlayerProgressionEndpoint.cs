@@ -15,6 +15,13 @@ namespace R6Sharp.Endpoint
             _sessionHandler = sessionHandler;
         }
 
+        /// <inheritdoc/>
+        public async Task<PlayerProgression> GetPlayerProgressionAsync(Guid uuid, Platform platform)
+        {
+            var profiles = await GetPlayerProgressionAsync(new[] { uuid }, platform).ConfigureAwait(false);
+            return profiles.Count > 0 ? profiles[0] : null;
+        }
+
         /// <summary>
         /// Get a list of basic profiles (like <see cref="PlayerProgression.XP"/> and <see cref="PlayerProgression.Level"/>).
         /// </summary>
@@ -36,7 +43,7 @@ namespace R6Sharp.Endpoint
             var restRequest = new RestRequest(endpoint, Method.Get)
                 .AddQueryParameter("profile_ids", string.Join(',', uuids));
 
-            PlayerProgressionFetch playerProgressionFetch = await EndpointHelper
+            PlayerProgressionFetch playerProgressionFetch = await ApiHelper
                 .BuildRestClient(session)
                 .GetAsync<PlayerProgressionFetch>(restRequest);
 
@@ -47,13 +54,6 @@ namespace R6Sharp.Endpoint
                 result.ProfileIcon = new Uri(formatted);
             }
             return playerProgressionFetch.PlayerProgressions;
-        }
-
-        /// <inheritdoc/>
-        public async Task<PlayerProgression> GetPlayerProgressionAsync(Guid uuid, Platform platform)
-        {
-            var profiles = await GetPlayerProgressionAsync(new[] { uuid }, platform).ConfigureAwait(false);
-            return profiles.Count > 0 ? profiles[0] : null;
         }
     }
 }

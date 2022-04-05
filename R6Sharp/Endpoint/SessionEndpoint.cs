@@ -121,7 +121,7 @@ namespace R6Sharp.Endpoint
             // Add authorization header
             restRequest.AddHeader(KnownHeaders.Authorization, $"Basic {_credentialsb64}");
 
-            return await EndpointHelper
+            return await ApiHelper
                 .BuildRestClient(null)
                 .PostAsync<Session>(restRequest);
         }

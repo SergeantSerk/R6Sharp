@@ -14,6 +14,11 @@ namespace R6Sharp.Endpoint
             _sessionHandler = sessionHandler;
         }
 
+        public async Task<PlayersSkillRecords> GetPlayerSkillRecordsAsync(Guid uuid, Platform platform, Region region, params int[] seasons)
+        {
+            return await GetPlayersSkillRecordsAsync(new[] { uuid }, platform, region, seasons).ConfigureAwait(false);
+        }
+
         public async Task<PlayersSkillRecords> GetPlayersSkillRecordsAsync(Guid[] uuids, Platform platform, Region region, params int[] seasons)
         {
             Session session = await _sessionHandler.GetCurrentSessionAsync();
@@ -26,14 +31,9 @@ namespace R6Sharp.Endpoint
                 .AddQueryParameter("region_ids", Constant.RegionToString(region))
                 .AddQueryParameter("season_ids", string.Join(',', seasons));
 
-            return await EndpointHelper
+            return await ApiHelper
                 .BuildRestClient(session)
                 .GetAsync<PlayersSkillRecords>(restRequest);
-        }
-
-        public async Task<PlayersSkillRecords> GetPlayerSkillRecordsAsync(Guid uuid, Platform platform, Region region, params int[] seasons)
-        {
-            return await GetPlayersSkillRecordsAsync(new[] { uuid }, platform, region, seasons).ConfigureAwait(false);
         }
     }
 }

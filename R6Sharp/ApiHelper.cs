@@ -1,9 +1,28 @@
-﻿using System.Collections.Generic;
+﻿using R6Sharp.Response;
+using RestSharp;
+using System.Collections.Generic;
 
 namespace R6Sharp
 {
     internal static class ApiHelper
     {
+        internal static RestClient BuildRestClient(Session session)
+        {
+            // TO-DO: figure out dynamic versioning for User-Agent
+            var restClientOptions = new RestClientOptions { UserAgent = "R6Sharp/3.0" };
+            var restClient = new RestClient(restClientOptions);
+            restClient.AddDefaultHeader("Ubi-AppId", Constant.Rainbow6S.ToString());
+
+            if (session != null)
+            {
+                restClient.AddDefaultHeader(KnownHeaders.Authorization, $"Ubi_v1 t={session.Ticket}");
+                restClient.AddDefaultHeader("Expiration", session.Expiration.ToString("O"));
+                restClient.AddDefaultHeader("Ubi-SessionID", session.SessionId.ToString());
+            }
+
+            return restClient;
+        }
+
         internal static string DeriveGamemodeFlags(Gamemode gamemode)
         {
             var gamemodes = new List<string>();

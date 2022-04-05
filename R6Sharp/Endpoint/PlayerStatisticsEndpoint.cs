@@ -33,7 +33,7 @@ namespace R6Sharp.Endpoint
                 .AddQueryParameter("populations", HttpUtility.UrlEncode(string.Join(',', uuids)))
                 .AddQueryParameter("statistics", Constant.QueuesStatisticsVariables);
 
-            QueueStatistics queueStatistics = await EndpointHelper
+            QueueStatistics queueStatistics = await ApiHelper
                 .BuildRestClient(session)
                 .GetAsync<QueueStatistics>(restRequest);
             return queueStatistics.PlayerQueueStatistics;
