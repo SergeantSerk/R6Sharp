@@ -229,7 +229,7 @@ namespace R6Sharp
                 restRequest = restRequest.AddQueryParameter(query.Key, query.Value);
             }
 
-            return await EndpointHelper
+            return await ApiHelper
                 .BuildRestClient(session)
                 .GetAsync<T>(restRequest);
         }
