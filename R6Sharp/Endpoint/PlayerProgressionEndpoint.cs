@@ -1,7 +1,7 @@
 ﻿using R6Sharp.Response;
+using RestSharp;
 using System;
 using System.Collections.Generic;
-using System.Text.Json;
 using System.Threading.Tasks;
 
 namespace R6Sharp.Endpoint
@@ -29,21 +29,24 @@ namespace R6Sharp.Endpoint
         /// </returns>
         public async Task<List<PlayerProgression>> GetPlayerProgressionAsync(Guid[] uuids, Platform platform)
         {
-            var queries = new List<KeyValuePair<string, string>>
-            {
-                new KeyValuePair<string, string>("profile_ids", string.Join(',', uuids))
-            };
+            Session session = await _sessionHandler.GetCurrentSessionAsync();
 
-            var session = await _sessionHandler.GetCurrentSessionAsync().ConfigureAwait(false);
-            using var results = await ApiHelper.GetDataAsync(Endpoints.UbiServices.Progressions, platform, queries, session).ConfigureAwait(false);
-            var deserialised = await JsonSerializer.DeserializeAsync<PlayerProgressionFetch>(results).ConfigureAwait(false);
-            foreach (var result in deserialised.PlayerProgressions)
+            string constructedUrl = string.Format(Endpoints.UbiServices.Progressions, Constant.PlatformToGuid(platform), Constant.PlatformToSandbox(platform));
+            var endpoint = new Uri(constructedUrl);
+            var restRequest = new RestRequest(endpoint, Method.Get)
+                .AddQueryParameter("profile_ids", string.Join(',', uuids));
+
+            PlayerProgressionFetch playerProgressionFetch = await EndpointHelper
+                .BuildRestClient(session)
+                .GetAsync<PlayerProgressionFetch>(restRequest);
+
+            foreach (var result in playerProgressionFetch.PlayerProgressions)
             {
                 // Attach link to player profile icon url
                 var formatted = string.Format(Endpoints.Static.Avatar, result.ProfileId, Constant.Rainbow6S);
                 result.ProfileIcon = new Uri(formatted);
             }
-            return deserialised.PlayerProgressions;
+            return playerProgressionFetch.PlayerProgressions;
         }
 
         /// <inheritdoc/>

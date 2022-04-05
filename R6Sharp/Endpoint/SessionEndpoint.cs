@@ -1,8 +1,7 @@
 ﻿using R6Sharp.Response;
+using RestSharp;
 using System;
-using System.Collections.Generic;
 using System.IO;
-using System.Net;
 using System.Text;
 using System.Text.Json;
 using System.Threading.Tasks;
@@ -43,7 +42,7 @@ namespace R6Sharp.Endpoint
             return _currentSession;
         }
 
-        public async Task<string> GetTicketAsync()
+        private async Task<string> GetTicketAsync()
         {
             var sessionFileName = "session.json";
             var now = DateTime.UtcNow;
@@ -115,18 +114,16 @@ namespace R6Sharp.Endpoint
         private async Task<Session> GetSessionAsync()
         {
             // Build json for remembering (or not) the user/session
-            var data = $"{{\"rememberMe\": {(RememberMe ? "true" : "false")}}}";
-            // Add authorization header
-            var headervaluepairs = new[]
-            {
-                new KeyValuePair<string, string>(HttpRequestHeader.Authorization.ToString(), $"Basic {_credentialsb64}")
-            };
-
-            // Get result from endpoint
+            var requestBody = $"{{\"rememberMe\": {(RememberMe ? "true" : "false")}}}";
             var endpoint = new Uri(Endpoints.UbiServices.Sessions);
-            var response = await ApiHelper.BuildRequestAsync(endpoint, headervaluepairs, data, false).ConfigureAwait(false);
-            using var stream = response.Item2;
-            return await JsonSerializer.DeserializeAsync<Session>(stream).ConfigureAwait(false);
+            var restRequest = new RestRequest(endpoint, Method.Post)
+                .AddStringBody(requestBody, DataFormat.Json);
+            // Add authorization header
+            restRequest.AddHeader(KnownHeaders.Authorization, $"Basic {_credentialsb64}");
+
+            return await EndpointHelper
+                .BuildRestClient(null)
+                .PostAsync<Session>(restRequest);
         }
     }
 }

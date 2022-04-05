@@ -1,9 +1,8 @@
 ﻿using R6Sharp.Response;
+using RestSharp;
 using System;
 using System.Collections.Generic;
-using System.Text.Json;
 using System.Threading.Tasks;
-using System.Web;
 
 namespace R6Sharp.Endpoint
 {
@@ -30,6 +29,11 @@ namespace R6Sharp.Endpoint
         /// </returns>
         public async Task<List<Profile>> GetProfileAsync(string[] players, Platform platform)
         {
+            if (players == null || players.Length == 0)
+            {
+                throw new ArgumentException($"{nameof(players)} cannot be null or empty.");
+            }
+
             foreach (var player in players)
             {
                 if (string.IsNullOrEmpty(player))
@@ -38,12 +42,31 @@ namespace R6Sharp.Endpoint
                 }
             }
 
-            return await Get(platform, "namesOnPlatform", HttpUtility.UrlEncode(string.Join(',', players))).ConfigureAwait(false);
+            Session session = await _sessionHandler.GetCurrentSessionAsync();
+
+            var endpoint = new Uri(Endpoints.UbiServices.Search);
+            var restRequest = new RestRequest(endpoint, Method.Get)
+                .AddQueryParameter("namesOnPlatform", string.Join(',', players))
+                .AddQueryParameter("platformType", Constant.PlatformToString(platform));
+
+            ProfileSearch profileSearch = await EndpointHelper
+                .BuildRestClient(session)
+                .GetAsync<ProfileSearch>(restRequest);
+            return profileSearch.Profiles;
         }
 
         public async Task<List<Profile>> GetProfileAsync(Guid[] uuids)
         {
-            return await Get(null, "profileIds", HttpUtility.UrlEncode(string.Join(',', uuids))).ConfigureAwait(false);
+            Session session = await _sessionHandler.GetCurrentSessionAsync();
+
+            var endpoint = new Uri(Endpoints.UbiServices.Search);
+            var restRequest = new RestRequest(endpoint, Method.Get)
+                .AddQueryParameter("profileIds", string.Join(',', uuids));
+
+            ProfileSearch profileSearch = await EndpointHelper
+                .BuildRestClient(session)
+                .GetAsync<ProfileSearch>(restRequest);
+            return profileSearch.Profiles;
         }
 
         /// <inheritdoc/>
@@ -60,22 +83,6 @@ namespace R6Sharp.Endpoint
             var profiles = await GetProfileAsync(new Guid[] { uuid }).ConfigureAwait(false);
             // the search result could contain more than one result, return first anyways
             return profiles.Count > 0 ? profiles[0] : null;
-        }
-
-        private async Task<List<Profile>> Get(Platform? platform, string queryKey, string queryValue)
-        {
-            var queries = new List<KeyValuePair<string, string>>();
-            if (platform.HasValue)
-            {
-                var query = new KeyValuePair<string, string>("platformType", Constant.PlatformToString(platform.Value));
-                queries.Add(query);
-            }
-            queries.Add(new KeyValuePair<string, string>(queryKey, queryValue));
-
-            var session = await _sessionHandler.GetCurrentSessionAsync().ConfigureAwait(false);
-            using var results = await ApiHelper.GetDataAsync(Endpoints.UbiServices.Search, null, queries, session).ConfigureAwait(false);
-            var deserialised = await JsonSerializer.DeserializeAsync<ProfileSearch>(results).ConfigureAwait(false);
-            return deserialised.Profiles;
         }
     }
 }

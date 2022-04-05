@@ -1,9 +1,8 @@
 ﻿using R6Sharp.Response;
 using R6Sharp.Response.Statistic;
+using RestSharp;
 using System;
 using System.Collections.Generic;
-using System.IO;
-using System.Text.Json;
 using System.Threading.Tasks;
 using System.Web;
 
@@ -26,18 +25,18 @@ namespace R6Sharp.Endpoint
 
         public async Task<Dictionary<string, Dictionary<string, double>>> GetQueueStatisticsAsync(Guid[] uuids, Platform platform)
         {
-            var queries = new List<KeyValuePair<string, string>>
-            {
-                new KeyValuePair<string, string>("populations", HttpUtility.UrlEncode(string.Join(',', uuids))),
-                new KeyValuePair<string, string>("statistics", Constant.QueuesStatisticsVariables)
-            };
+            Session session = await _sessionHandler.GetCurrentSessionAsync();
 
-            var session = await _sessionHandler.GetCurrentSessionAsync().ConfigureAwait(false);
-            using var results = await ApiHelper.GetDataAsync(Endpoints.UbiServices.Statistics, platform, queries, session)
-                                               .ConfigureAwait(false);
-            var deserialised = await JsonSerializer.DeserializeAsync<QueueStatistics>(results)
-                                                   .ConfigureAwait(false);
-            return deserialised.PlayerQueueStatistics;
+            string constructedUrl = string.Format(Endpoints.UbiServices.Statistics, Constant.PlatformToGuid(platform), Constant.PlatformToSandbox(platform));
+            var endpoint = new Uri(constructedUrl);
+            var restRequest = new RestRequest(endpoint, Method.Get)
+                .AddQueryParameter("populations", HttpUtility.UrlEncode(string.Join(',', uuids)))
+                .AddQueryParameter("statistics", Constant.QueuesStatisticsVariables);
+
+            QueueStatistics queueStatistics = await EndpointHelper
+                .BuildRestClient(session)
+                .GetAsync<QueueStatistics>(restRequest);
+            return queueStatistics.PlayerQueueStatistics;
         }
     }
 }

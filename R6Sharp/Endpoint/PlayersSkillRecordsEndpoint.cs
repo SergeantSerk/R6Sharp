@@ -1,7 +1,6 @@
 ﻿using R6Sharp.Response;
+using RestSharp;
 using System;
-using System.Collections.Generic;
-using System.Text.Json;
 using System.Threading.Tasks;
 
 namespace R6Sharp.Endpoint
@@ -17,18 +16,19 @@ namespace R6Sharp.Endpoint
 
         public async Task<PlayersSkillRecords> GetPlayersSkillRecordsAsync(Guid[] uuids, Platform platform, Region region, params int[] seasons)
         {
-            var queries = new List<KeyValuePair<string, string>>
-            {
-                new KeyValuePair<string, string>("profile_ids", string.Join(',', uuids)),
-                new KeyValuePair<string, string>("board_ids", "pvp_ranked"),
-                new KeyValuePair<string, string>("region_ids", Constant.RegionToString(region)),
-                new KeyValuePair<string, string>("season_ids", string.Join(',', seasons))
-            };
+            Session session = await _sessionHandler.GetCurrentSessionAsync();
 
-            var session = await _sessionHandler.GetCurrentSessionAsync().ConfigureAwait(false);
-            using var results = await ApiHelper.GetDataAsync(Endpoints.UbiServices.PlayerSkillRecords, platform, queries, session).ConfigureAwait(false);
-            var deserialised = await JsonSerializer.DeserializeAsync<PlayersSkillRecords>(results).ConfigureAwait(false);
-            return deserialised;
+            string constructedUrl = string.Format(Endpoints.UbiServices.PlayerSkillRecords, Constant.PlatformToGuid(platform), Constant.PlatformToSandbox(platform));
+            var endpoint = new Uri(constructedUrl);
+            var restRequest = new RestRequest(endpoint, Method.Get)
+                .AddQueryParameter("profile_ids", string.Join(',', uuids))
+                .AddQueryParameter("board_ids", "pvp_ranked")   // TO-DO: pvp_ranked only? Investigate
+                .AddQueryParameter("region_ids", Constant.RegionToString(region))
+                .AddQueryParameter("season_ids", string.Join(',', seasons));
+
+            return await EndpointHelper
+                .BuildRestClient(session)
+                .GetAsync<PlayersSkillRecords>(restRequest);
         }
 
         public async Task<PlayersSkillRecords> GetPlayerSkillRecordsAsync(Guid uuid, Platform platform, Region region, params int[] seasons)

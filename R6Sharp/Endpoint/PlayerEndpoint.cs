@@ -1,7 +1,7 @@
 ﻿using R6Sharp.Response;
+using RestSharp;
 using System;
 using System.Collections.Generic;
-using System.Text.Json;
 using System.Threading.Tasks;
 
 namespace R6Sharp.Endpoint
@@ -101,7 +101,7 @@ namespace R6Sharp.Endpoint
             return result[uuid.ToString()];
         }
 
-        #region Obseletes
+        #region Obsoletes
         // Since no season is specified, it is assumed the latest season is to be retrieved,
         // which doesn't matter what region is selected since they all have been merged from
         // season 18 and onwards.
@@ -136,18 +136,20 @@ namespace R6Sharp.Endpoint
 
         private async Task<Dictionary<string, BoardInfo>> Get(Guid[] uuids, Platform platform, Region region, int season, bool ranked)
         {
-            var queries = new List<KeyValuePair<string, string>>
-            {
-                new KeyValuePair<string, string>("profile_ids", string.Join(',', uuids)),
-                new KeyValuePair<string, string>("board_id", ranked ? "pvp_ranked" : "pvp_casual"),
-                new KeyValuePair<string, string>("region_id", Constant.RegionToString(region)),
-                new KeyValuePair<string, string>("season_id", season.ToString())
-            };
+            Session session = await _sessionHandler.GetCurrentSessionAsync();
 
-            var session = await _sessionHandler.GetCurrentSessionAsync().ConfigureAwait(false);
-            using var results = await ApiHelper.GetDataAsync(Endpoints.UbiServices.Players, platform, queries, session).ConfigureAwait(false);
-            var deserialised = await JsonSerializer.DeserializeAsync<BoardInfoFetch>(results).ConfigureAwait(false);
-            return deserialised.Players;
+            string constructedUrl = string.Format(Endpoints.UbiServices.Players, Constant.PlatformToGuid(platform), Constant.PlatformToSandbox(platform));
+            var endpoint = new Uri(constructedUrl);
+            var restRequest = new RestRequest(endpoint, Method.Get)
+                .AddQueryParameter("profile_ids", string.Join(',', uuids))
+                .AddQueryParameter("board_id", ranked ? "pvp_ranked" : "pvp_casual")
+                .AddQueryParameter("region_id", Constant.RegionToString(region))
+                .AddQueryParameter("season_id", season.ToString());
+
+            BoardInfoFetch boardInfoFetch = await EndpointHelper
+                .BuildRestClient(session)
+                .GetAsync<BoardInfoFetch>(restRequest);
+            return boardInfoFetch.Players;
         }
     }
 }

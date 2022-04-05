@@ -54,7 +54,7 @@ namespace R6Sharp.Response
         [JsonPropertyName("max_rank")]
         public int MaxRank { get; set; }
 
-        public RankInfo MaxRankInfo => new RankInfo(this, RankInfo.RankType.RankMMR); 
+        public RankInfo MaxRankInfo => new RankInfo(this, RankInfo.RankType.RankMMR);
 
         [JsonPropertyName("mmr")]
         public double MMR { get; set; }
@@ -200,7 +200,7 @@ namespace R6Sharp.Response
                 else
                 {
                     // Get rank tuple where MMR is in range
-                    var result = _ranks.Where(r => rank >= r.Item2 && 
+                    var result = _ranks.Where(r => rank >= r.Item2 &&
                                                    rank <= r.Item3)
                                        .First();
                     Name = result.Item1;
