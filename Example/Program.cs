@@ -75,27 +75,27 @@ namespace Example
             // var to = new DateTime(2020, 06, 16);
             var to = DateTime.UtcNow;
 
-            var summary = api.GetSummaryAsync(uuid, gamemodes, platform, from, to).Result;
+            var summary = api.R6SStatsEndpoint.GetSummaryAsync(uuid, gamemodes, platform, from, to).Result;
             var summaryKills = summary.Platforms["PC"]
                                       .Gamemodes["all"]
                                       .TeamRoles["all"].Last()
                                       .Kills;
 
-            var operators = api.GetOperatorAsync(uuid, gamemodes, platform, TeamRole.Attacker | TeamRole.Defender, from, to).Result;
+            var operators = api.R6SStatsEndpoint.GetOperatorAsync(uuid, gamemodes, platform, TeamRole.Attacker | TeamRole.Defender, from, to).Result;
             var zofiaRankedWins = operators.Platforms["PC"]
                                               .Gamemodes["ranked"]
                                               .TeamRoles["attacker"]
                                               .Where(x => x.StatsDetail == "Zofia").First()
                                               .RoundsWon;
 
-            var maps = api.GetMapAsync(uuid, gamemodes, platform, TeamRole.All | TeamRole.Attacker | TeamRole.Defender, from, to).Result;
+            var maps = api.R6SStatsEndpoint.GetMapAsync(uuid, gamemodes, platform, TeamRole.All | TeamRole.Attacker | TeamRole.Defender, from, to).Result;
             var kanalDefenderTeamKills = maps.Platforms["PC"]
                                              .Gamemodes["casual"]
                                              .TeamRoles["defender"]
                                              .Where(m => m.StatsDetail == "KANAL").First()
                                              .TeamKills;
 
-            var weapons = api.GetWeaponAsync(uuid, gamemodes, platform, TeamRole.All, from, to).Result;
+            var weapons = api.R6SStatsEndpoint.GetWeaponAsync(uuid, gamemodes, platform, TeamRole.All, from, to).Result;
             var allSpear308HeadshotAccuracy = weapons.Platforms["PC"]
                                                      .Gamemodes["all"]
                                                      .TeamRoles["all"]
@@ -107,13 +107,13 @@ namespace Example
                                                      .Where(w => w.WeaponName == "SPEAR .308").First()
                                                      .HeadshotAccuracy;
 
-            var trends = api.GetTrendAsync(uuid, gamemodes, from, to, TeamRole.All | TeamRole.Attacker | TeamRole.Defender, TrendType.Weeks).Result;
+            var trends = api.R6SStatsEndpoint.GetTrendAsync(uuid, gamemodes, from, to, TeamRole.All | TeamRole.Attacker | TeamRole.Defender, TrendType.Weeks).Result;
             var rankedAttackKDRTrend = trends.Platforms["PC"]
                                              .Gamemodes["ranked"]
                                              .TeamRoles["attacker"].Last()
                                              .KillDeathRatio;
 
-            var seasonal = api.GetSeasonalAsync(uuid, gamemodes, platform).Result;
+            var seasonal = api.R6SStatsEndpoint.GetSeasonalAsync(uuid, gamemodes, platform).Result;
             var rankedY4S4MinutesPlayed = seasonal.Platforms["PC"]
                                                   .Gamemodes["ranked"]
                                                   .TeamRoles["all"]
@@ -121,7 +121,7 @@ namespace Example
                                                   .Where(s => s.SeasonNumber == "S4").First()
                                                   .MinutesPlayed;
 
-            var narrative = api.GetNarrativeAsync(uuid, from, to).Result;
+            var narrative = api.R6SStatsEndpoint.GetNarrativeAsync(uuid, from, to).Result;
             var bestMatchScoreAnyWeek = narrative.Profiles[uuid.ToString()]
                                                  .Years.First()
                                                  .Value.Weeks.First()
