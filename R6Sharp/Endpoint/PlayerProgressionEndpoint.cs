@@ -1,7 +1,7 @@
 ﻿using R6Sharp.Response;
 using System;
 using System.Collections.Generic;
-using System.Text.Json;
+using System.Threading;
 using System.Threading.Tasks;
 
 namespace R6Sharp.Endpoint
@@ -27,30 +27,39 @@ namespace R6Sharp.Endpoint
         /// <returns>
         /// A list of basic profiles matching the request terms.
         /// </returns>
-        public async Task<List<PlayerProgression>> GetPlayerProgressionAsync(Guid[] uuids, Platform platform)
+        public async Task<List<PlayerProgression>> GetPlayerProgressionAsync(Guid[] uuids,
+            Platform platform,
+            CancellationToken cancellationToken = default)
         {
             var queries = new List<KeyValuePair<string, string>>
             {
                 new KeyValuePair<string, string>("profile_ids", string.Join(',', uuids))
             };
 
-            var session = await _sessionHandler.GetCurrentSessionAsync().ConfigureAwait(false);
-            using var results = await ApiHelper.GetDataAsync(Endpoints.UbiServices.Progressions, platform, queries, session).ConfigureAwait(false);
-            var deserialised = await JsonSerializer.DeserializeAsync<PlayerProgressionFetch>(results).ConfigureAwait(false);
-            foreach (var result in deserialised.PlayerProgressions)
+            Session session = await _sessionHandler.GetCurrentSessionAsync().ConfigureAwait(false);
+            PlayerProgressionFetch results = await ApiHelper.GetDataAsync<PlayerProgressionFetch>(Endpoints.UbiServices.Progressions,
+                platform: platform,
+                queries,
+                session,
+                cancellationToken).ConfigureAwait(false);
+            foreach (var result in results.PlayerProgressions)
             {
                 // Attach link to player profile icon url
-                var formatted = string.Format(Endpoints.Static.Avatar, result.ProfileId, Constant.Rainbow6S);
+                string formatted = string.Format(Endpoints.Static.Avatar, result.ProfileId, Constant.Rainbow6S);
                 result.ProfileIcon = new Uri(formatted);
             }
-            return deserialised.PlayerProgressions;
+            return results.PlayerProgressions;
         }
 
         /// <inheritdoc/>
-        public async Task<PlayerProgression> GetPlayerProgressionAsync(Guid uuid, Platform platform)
+        public async Task<PlayerProgression> GetPlayerProgressionAsync(Guid uuid,
+            Platform platform,
+            CancellationToken cancellationToken = default)
         {
-            var profiles = await GetPlayerProgressionAsync(new[] { uuid }, platform).ConfigureAwait(false);
-            return profiles.Count > 0 ? profiles[0] : null;
+            List<PlayerProgression> playerProgressions = await GetPlayerProgressionAsync(new[] { uuid },
+                platform,
+                cancellationToken).ConfigureAwait(false);
+            return playerProgressions.Count > 0 ? playerProgressions[0] : null;
         }
     }
 }

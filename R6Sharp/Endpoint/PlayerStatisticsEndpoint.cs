@@ -2,8 +2,7 @@
 using R6Sharp.Response.Statistic;
 using System;
 using System.Collections.Generic;
-using System.IO;
-using System.Text.Json;
+using System.Threading;
 using System.Threading.Tasks;
 using System.Web;
 
@@ -18,13 +17,19 @@ namespace R6Sharp.Endpoint
             _sessionHandler = sessionHandler;
         }
 
-        public async Task<Dictionary<string, double>> GetQueueStatisticsAsync(Guid uuid, Platform platform)
+        public async Task<Dictionary<string, double>> GetQueueStatisticsAsync(Guid uuid,
+            Platform platform,
+            CancellationToken cancellationToken = default)
         {
-            var results = await GetQueueStatisticsAsync(new Guid[] { uuid }, platform).ConfigureAwait(false);
+            Dictionary<string, Dictionary<string, double>> results = await GetQueueStatisticsAsync(new Guid[] { uuid },
+                platform,
+                cancellationToken).ConfigureAwait(false);
             return results[uuid.ToString()];
         }
 
-        public async Task<Dictionary<string, Dictionary<string, double>>> GetQueueStatisticsAsync(Guid[] uuids, Platform platform)
+        public async Task<Dictionary<string, Dictionary<string, double>>> GetQueueStatisticsAsync(Guid[] uuids,
+            Platform platform,
+            CancellationToken cancellationToken = default)
         {
             var queries = new List<KeyValuePair<string, string>>
             {
@@ -32,12 +37,13 @@ namespace R6Sharp.Endpoint
                 new KeyValuePair<string, string>("statistics", Constant.QueuesStatisticsVariables)
             };
 
-            var session = await _sessionHandler.GetCurrentSessionAsync().ConfigureAwait(false);
-            using var results = await ApiHelper.GetDataAsync(Endpoints.UbiServices.Statistics, platform, queries, session)
-                                               .ConfigureAwait(false);
-            var deserialised = await JsonSerializer.DeserializeAsync<QueueStatistics>(results)
-                                                   .ConfigureAwait(false);
-            return deserialised.PlayerQueueStatistics;
+            Session session = await _sessionHandler.GetCurrentSessionAsync().ConfigureAwait(false);
+            QueueStatistics results = await ApiHelper.GetDataAsync<QueueStatistics>(Endpoints.UbiServices.Statistics,
+                platform: platform,
+                queries,
+                session,
+                cancellationToken).ConfigureAwait(false);
+            return results.PlayerQueueStatistics;
         }
     }
 }

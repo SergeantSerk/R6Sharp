@@ -1,7 +1,7 @@
 ﻿using R6Sharp.Response;
 using System;
 using System.Collections.Generic;
-using System.Text.Json;
+using System.Threading;
 using System.Threading.Tasks;
 
 namespace R6Sharp.Endpoint
@@ -33,9 +33,13 @@ namespace R6Sharp.Endpoint
         /// <returns>
         /// A list of players matching the request terms in a dictionary (to be referenced with the player UUID as key).
         /// </returns>
-        public async Task<Dictionary<string, BoardInfo>> GetRankedAsync(Guid[] uuids, Platform platform, Region region, int season)
+        public async Task<Dictionary<string, BoardInfo>> GetRankedAsync(Guid[] uuids,
+            Platform platform,
+            Region region,
+            int season,
+            CancellationToken cancellationToken = default)
         {
-            return await Get(uuids, platform, region, season, true).ConfigureAwait(false);
+            return await Get(uuids, platform, region, season, true, cancellationToken).ConfigureAwait(false);
         }
 
         /// <summary>
@@ -56,85 +60,85 @@ namespace R6Sharp.Endpoint
         /// <returns>
         /// A list of players matching the request terms in a dictionary (to be referenced with the player UUID as key).
         /// </returns>
-        public async Task<Dictionary<string, BoardInfo>> GetCasualAsync(Guid[] uuids, Platform platform, Region region, int season)
+        public async Task<Dictionary<string, BoardInfo>> GetCasualAsync(Guid[] uuids,
+            Platform platform,
+            Region region,
+            int season,
+            CancellationToken cancellationToken = default)
         {
-            return await Get(uuids, platform, region, season, false).ConfigureAwait(false);
+            return await Get(uuids, platform, region, season, false, cancellationToken).ConfigureAwait(false);
         }
 
         /// <inheritdoc/>
-        public async Task<BoardInfo> GetRankedAsync(Guid uuid, Platform platform)
+        public async Task<BoardInfo> GetRankedAsync(Guid uuid,
+            Platform platform,
+            CancellationToken cancellationToken = default)
         {
-            var result = await GetRankedAsync(uuid, platform, Region.NCSA, -1).ConfigureAwait(false);
+            BoardInfo result = await GetRankedAsync(uuid, platform, Region.NCSA, -1, cancellationToken).ConfigureAwait(false);
             return result;
         }
 
         /// <inheritdoc/>
-        public async Task<Dictionary<string, BoardInfo>> GetRankedAsync(Guid[] uuids, Platform platform)
+        public async Task<Dictionary<string, BoardInfo>> GetRankedAsync(Guid[] uuids,
+            Platform platform,
+            CancellationToken cancellationToken = default)
         {
-            return await GetRankedAsync(uuids, platform, Region.NCSA, -1).ConfigureAwait(false);
+            return await GetRankedAsync(uuids, platform, Region.NCSA, -1, cancellationToken).ConfigureAwait(false);
         }
 
         /// <inheritdoc/>
-        public async Task<BoardInfo> GetRankedAsync(Guid uuid, Platform platform, Region region, int season)
+        public async Task<BoardInfo> GetRankedAsync(Guid uuid,
+            Platform platform,
+            Region region,
+            int season,
+            CancellationToken cancellationToken = default)
         {
-            var result = await GetRankedAsync(new[] { uuid }, platform, region, season).ConfigureAwait(false);
+            Dictionary<string, BoardInfo> result = await GetRankedAsync(new[] { uuid },
+                platform,
+                region,
+                season,
+                cancellationToken).ConfigureAwait(false);
             return result[uuid.ToString()];
         }
 
         /// <inheritdoc/>
-        public async Task<BoardInfo> GetCasualAsync(Guid uuid, Platform platform)
+        public async Task<BoardInfo> GetCasualAsync(Guid uuid,
+            Platform platform,
+            CancellationToken cancellationToken = default)
         {
-            var result = await GetCasualAsync(uuid, platform, Region.NCSA, -1).ConfigureAwait(false);
+            BoardInfo result = await GetCasualAsync(uuid, platform, Region.NCSA, -1, cancellationToken).ConfigureAwait(false);
             return result;
         }
 
         /// <inheritdoc/>
-        public async Task<Dictionary<string, BoardInfo>> GetCasualAsync(Guid[] uuids, Platform platform)
+        public async Task<Dictionary<string, BoardInfo>> GetCasualAsync(Guid[] uuids,
+            Platform platform,
+            CancellationToken cancellationToken = default)
         {
-            return await GetCasualAsync(uuids, platform, Region.NCSA, -1).ConfigureAwait(false);
+            return await GetCasualAsync(uuids, platform, Region.NCSA, -1, cancellationToken).ConfigureAwait(false);
         }
 
         /// <inheritdoc/>
-        public async Task<BoardInfo> GetCasualAsync(Guid uuid, Platform platform, Region region, int season)
+        public async Task<BoardInfo> GetCasualAsync(Guid uuid,
+            Platform platform,
+            Region region,
+            int season,
+            CancellationToken cancellationToken = default)
         {
-            var result = await GetCasualAsync(new[] { uuid }, platform, region, season).ConfigureAwait(false);
+            Dictionary<string, BoardInfo> result = await GetCasualAsync(new[] { uuid },
+                platform,
+                region,
+                season,
+                cancellationToken).ConfigureAwait(false);
             return result[uuid.ToString()];
         }
 
-        #region Obseletes
-        // Since no season is specified, it is assumed the latest season is to be retrieved,
-        // which doesn't matter what region is selected since they all have been merged from
-        // season 18 and onwards.
-        [Obsolete]
-        /// <inheritdoc/>
-        public async Task<BoardInfo> GetRankedAsync(Guid uuid, Platform platform, Region region)
-        {
-            return await GetRankedAsync(uuid, platform, region, -1).ConfigureAwait(false);
-        }
-
-        [Obsolete]
-        /// <inheritdoc/>
-        public async Task<Dictionary<string, BoardInfo>> GetRankedAsync(Guid[] uuids, Platform platform, Region region)
-        {
-            return await GetRankedAsync(uuids, platform, region, -1).ConfigureAwait(false);
-        }
-
-        [Obsolete]
-        /// <inheritdoc/>
-        public async Task<BoardInfo> GetCasualAsync(Guid uuid, Platform platform, Region region)
-        {
-            return await GetCasualAsync(uuid, platform, region, -1).ConfigureAwait(false);
-        }
-
-        [Obsolete]
-        /// <inheritdoc/>
-        public async Task<Dictionary<string, BoardInfo>> GetCasualAsync(Guid[] uuids, Platform platform, Region region)
-        {
-            return await GetCasualAsync(uuids, platform, region, -1).ConfigureAwait(false);
-        }
-        #endregion
-
-        private async Task<Dictionary<string, BoardInfo>> Get(Guid[] uuids, Platform platform, Region region, int season, bool ranked)
+        private async Task<Dictionary<string, BoardInfo>> Get(Guid[] uuids,
+            Platform platform,
+            Region region,
+            int season,
+            bool ranked,
+            CancellationToken cancellationToken = default)
         {
             var queries = new List<KeyValuePair<string, string>>
             {
@@ -144,10 +148,13 @@ namespace R6Sharp.Endpoint
                 new KeyValuePair<string, string>("season_id", season.ToString())
             };
 
-            var session = await _sessionHandler.GetCurrentSessionAsync().ConfigureAwait(false);
-            using var results = await ApiHelper.GetDataAsync(Endpoints.UbiServices.Players, platform, queries, session).ConfigureAwait(false);
-            var deserialised = await JsonSerializer.DeserializeAsync<BoardInfoFetch>(results).ConfigureAwait(false);
-            return deserialised.Players;
+            Session session = await _sessionHandler.GetCurrentSessionAsync().ConfigureAwait(false);
+            BoardInfoFetch results = await ApiHelper.GetDataAsync<BoardInfoFetch>(Endpoints.UbiServices.Players,
+                platform,
+                queries,
+                session,
+                cancellationToken).ConfigureAwait(false);
+            return results.Players;
         }
     }
 }

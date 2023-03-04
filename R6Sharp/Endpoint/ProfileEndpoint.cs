@@ -1,7 +1,7 @@
 ﻿using R6Sharp.Response;
 using System;
 using System.Collections.Generic;
-using System.Text.Json;
+using System.Threading;
 using System.Threading.Tasks;
 using System.Web;
 
@@ -28,7 +28,9 @@ namespace R6Sharp.Endpoint
         /// <returns>
         /// A list of players that matched the terms.
         /// </returns>
-        public async Task<List<Profile>> GetProfileAsync(string[] players, Platform platform)
+        public async Task<List<Profile>> GetProfileAsync(string[] players,
+            Platform platform,
+            CancellationToken cancellationToken = default)
         {
             foreach (var player in players)
             {
@@ -38,31 +40,43 @@ namespace R6Sharp.Endpoint
                 }
             }
 
-            return await Get(platform, "namesOnPlatform", HttpUtility.UrlEncode(string.Join(',', players))).ConfigureAwait(false);
+            return await Get(platform,
+                "namesOnPlatform",
+                HttpUtility.UrlEncode(string.Join(',', players)),
+                cancellationToken).ConfigureAwait(false);
         }
 
-        public async Task<List<Profile>> GetProfileAsync(Guid[] uuids)
+        public async Task<List<Profile>> GetProfileAsync(Guid[] uuids, CancellationToken cancellationToken = default)
         {
-            return await Get(null, "profileIds", HttpUtility.UrlEncode(string.Join(',', uuids))).ConfigureAwait(false);
+            return await Get(null,
+                "profileIds",
+                HttpUtility.UrlEncode(string.Join(',', uuids)),
+                cancellationToken).ConfigureAwait(false);
         }
 
         /// <inheritdoc/>
-        public async Task<Profile> GetProfileAsync(string player, Platform platform)
+        public async Task<Profile> GetProfileAsync(string player, Platform platform, CancellationToken cancellationToken = default)
         {
-            var profiles = await GetProfileAsync(new string[] { player }, platform).ConfigureAwait(false);
+            List<Profile> profiles = await GetProfileAsync(new string[] { player },
+                platform,
+                cancellationToken).ConfigureAwait(false);
             // the search result could contain more than one result, return first anyways
             return profiles.Count > 0 ? profiles[0] : null;
         }
 
         /// <inheritdoc/>
-        public async Task<Profile> GetProfileAsync(Guid uuid)
+        public async Task<Profile> GetProfileAsync(Guid uuid, CancellationToken cancellationToken = default)
         {
-            var profiles = await GetProfileAsync(new Guid[] { uuid }).ConfigureAwait(false);
+            List<Profile> profiles = await GetProfileAsync(new Guid[] { uuid },
+                cancellationToken).ConfigureAwait(false);
             // the search result could contain more than one result, return first anyways
             return profiles.Count > 0 ? profiles[0] : null;
         }
 
-        private async Task<List<Profile>> Get(Platform? platform, string queryKey, string queryValue)
+        private async Task<List<Profile>> Get(Platform? platform,
+            string queryKey,
+            string queryValue,
+            CancellationToken cancellationToken = default)
         {
             var queries = new List<KeyValuePair<string, string>>();
             if (platform.HasValue)
@@ -72,10 +86,13 @@ namespace R6Sharp.Endpoint
             }
             queries.Add(new KeyValuePair<string, string>(queryKey, queryValue));
 
-            var session = await _sessionHandler.GetCurrentSessionAsync().ConfigureAwait(false);
-            using var results = await ApiHelper.GetDataAsync(Endpoints.UbiServices.Search, null, queries, session).ConfigureAwait(false);
-            var deserialised = await JsonSerializer.DeserializeAsync<ProfileSearch>(results).ConfigureAwait(false);
-            return deserialised.Profiles;
+            Session session = await _sessionHandler.GetCurrentSessionAsync().ConfigureAwait(false);
+            ProfileSearch results = await ApiHelper.GetDataAsync<ProfileSearch>(Endpoints.UbiServices.Search,
+                platform: null,
+                queries,
+                session,
+                cancellationToken).ConfigureAwait(false);
+            return results.Profiles;
         }
     }
 }

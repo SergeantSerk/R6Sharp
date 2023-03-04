@@ -5,6 +5,7 @@ using System.IO;
 using System.Net;
 using System.Text;
 using System.Text.Json;
+using System.Threading;
 using System.Threading.Tasks;
 
 namespace R6Sharp.Endpoint
@@ -35,15 +36,15 @@ namespace R6Sharp.Endpoint
             _credentialsb64 = Convert.ToBase64String(bytes);
         }
 
-        public async Task<Session> GetCurrentSessionAsync()
+        public async Task<Session> GetCurrentSessionAsync(CancellationToken cancellationToken = default)
         {
             // refresh ticket state
-            await GetTicketAsync().ConfigureAwait(false);
+            await GetTicketAsync(cancellationToken).ConfigureAwait(false);
 
             return _currentSession;
         }
 
-        public async Task<string> GetTicketAsync()
+        public async Task<string> GetTicketAsync(CancellationToken cancellationToken = default)
         {
             var sessionFileName = "session.json";
             var now = DateTime.UtcNow;
@@ -62,8 +63,9 @@ namespace R6Sharp.Endpoint
                 // This is the first time starting session, check if session details were saved as JSON
                 try
                 {
-                    var json = File.ReadAllText(sessionFileName);
-                    var loadedSession = JsonSerializer.Deserialize<Session>(json);
+                    using var fileStream = File.OpenRead(sessionFileName);
+                    Session loadedSession = await JsonSerializer.DeserializeAsync<Session>(fileStream,
+                        cancellationToken: cancellationToken);
 
                     // If Session was readable and there is time before expiration
                     if (loadedSession != null && ValidateSession(now, loadedSession.Expiration))
@@ -95,10 +97,11 @@ namespace R6Sharp.Endpoint
             if (requestNewSession)
             {
                 // Refresh current session details (will get new session if expired or non-existent)
-                _currentSession = await GetSessionAsync().ConfigureAwait(false);
+                _currentSession = await GetSessionAsync(cancellationToken).ConfigureAwait(false);
                 // Save new session to file
                 using var file = File.OpenWrite(sessionFileName);
-                await JsonSerializer.SerializeAsync<Session>(file, _currentSession).ConfigureAwait(false);
+                await JsonSerializer.SerializeAsync(file, _currentSession,
+                    cancellationToken: cancellationToken).ConfigureAwait(false);
             }
 
             return _currentSession.Ticket;
@@ -112,7 +115,7 @@ namespace R6Sharp.Endpoint
             return nowUtc.AddMinutes(1) <= expirationUtc;
         }
 
-        private async Task<Session> GetSessionAsync()
+        private async Task<Session> GetSessionAsync(CancellationToken cancellationToken = default)
         {
             // Build json for remembering (or not) the user/session
             var data = $"{{\"rememberMe\": {(RememberMe ? "true" : "false")}}}";
@@ -124,9 +127,11 @@ namespace R6Sharp.Endpoint
 
             // Get result from endpoint
             var endpoint = new Uri(Endpoints.UbiServices.Sessions);
-            var response = await ApiHelper.BuildRequestAsync(endpoint, headervaluepairs, data, false).ConfigureAwait(false);
-            using var stream = response.Item2;
-            return await JsonSerializer.DeserializeAsync<Session>(stream).ConfigureAwait(false);
+            return await ApiHelper.BuildRequestAsync<Session>(endpoint,
+                headervaluepairs,
+                data,
+                false,
+                cancellationToken).ConfigureAwait(false);
         }
     }
 }

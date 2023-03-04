@@ -15,11 +15,11 @@ namespace R6Sharp
 
     internal static class Constant
     {
-        internal static readonly string EquipmentsStatisticsVariable = 
+        internal static readonly string EquipmentsStatisticsVariable =
             $"{GadgetPve},{GadgetPvp},{WeaponPve}," +
             $"{WeaponPvp},{WeaponTypePve},{WeaponTypePvp}";
 
-        internal static readonly string GamemodesStatisticsVariables = 
+        internal static readonly string GamemodesStatisticsVariables =
             $"{ProtectHostagePve},{PlantBombPve},{PlantBombPvp}," +
             $"{RescueHostagePve},{RescueHostagePvp},{SecureAreaPve}," +
             $"{SecureAreaPvp}";
@@ -27,7 +27,7 @@ namespace R6Sharp
         internal static readonly string OperatorsStatisticsVariables =
             $"{OperatorPve},{OperatorPvp}";
 
-        internal static readonly string QueuesStatisticsVariables = 
+        internal static readonly string QueuesStatisticsVariables =
             $"{GeneralPve},{GeneralPvp},{NormalPvp}," +
             $"{CasualPvp},{RankedPvp},{CustomPvp}";
 

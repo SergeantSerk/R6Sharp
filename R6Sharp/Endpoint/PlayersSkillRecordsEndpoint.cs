@@ -1,7 +1,7 @@
 ﻿using R6Sharp.Response;
 using System;
 using System.Collections.Generic;
-using System.Text.Json;
+using System.Threading;
 using System.Threading.Tasks;
 
 namespace R6Sharp.Endpoint
@@ -15,7 +15,11 @@ namespace R6Sharp.Endpoint
             _sessionHandler = sessionHandler;
         }
 
-        public async Task<PlayersSkillRecords> GetPlayersSkillRecordsAsync(Guid[] uuids, Platform platform, Region region, params int[] seasons)
+        public async Task<PlayersSkillRecords> GetPlayersSkillRecordsAsync(Guid[] uuids,
+            Platform platform,
+            Region region,
+            IEnumerable<int> seasons,
+            CancellationToken cancellationToken = default)
         {
             var queries = new List<KeyValuePair<string, string>>
             {
@@ -25,15 +29,21 @@ namespace R6Sharp.Endpoint
                 new KeyValuePair<string, string>("season_ids", string.Join(',', seasons))
             };
 
-            var session = await _sessionHandler.GetCurrentSessionAsync().ConfigureAwait(false);
-            using var results = await ApiHelper.GetDataAsync(Endpoints.UbiServices.PlayerSkillRecords, platform, queries, session).ConfigureAwait(false);
-            var deserialised = await JsonSerializer.DeserializeAsync<PlayersSkillRecords>(results).ConfigureAwait(false);
-            return deserialised;
+            Session session = await _sessionHandler.GetCurrentSessionAsync().ConfigureAwait(false);
+            return await ApiHelper.GetDataAsync<PlayersSkillRecords>(Endpoints.UbiServices.PlayerSkillRecords,
+                platform: platform,
+                queries,
+                session,
+                cancellationToken).ConfigureAwait(false);
         }
 
-        public async Task<PlayersSkillRecords> GetPlayerSkillRecordsAsync(Guid uuid, Platform platform, Region region, params int[] seasons)
+        public async Task<PlayersSkillRecords> GetPlayerSkillRecordsAsync(Guid uuid,
+            Platform platform,
+            Region region,
+            IEnumerable<int> seasons,
+            CancellationToken cancellationToken = default)
         {
-            return await GetPlayersSkillRecordsAsync(new[] { uuid }, platform, region, seasons).ConfigureAwait(false);
+            return await GetPlayersSkillRecordsAsync(new[] { uuid }, platform, region, seasons, cancellationToken).ConfigureAwait(false);
         }
     }
 }

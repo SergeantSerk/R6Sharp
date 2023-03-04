@@ -1,25 +1,32 @@
-﻿using R6Sharp.Exceptions;
-using R6Sharp.Response;
+﻿using R6Sharp.Response;
 using System;
 using System.Collections.Generic;
-using System.IO;
-using System.Net;
 using System.Net.Http;
+using System.Net.Http.Json;
 using System.Net.Mime;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 
 namespace R6Sharp
 {
     internal static class ApiHelper
     {
-        internal static async Task<Stream> GetDataAsync(string url, Guid player, IEnumerable<KeyValuePair<string, string>> queries, Session session)
+        internal static async Task<T> GetDataAsync<T>(string url,
+            Guid player,
+            IEnumerable<KeyValuePair<string, string>> queries,
+            Session session,
+            CancellationToken cancellationToken = default)
         {
             url = string.Format(url, player.ToString());
-            return await GetDataAsync(url, queries, session).ConfigureAwait(false);
+            return await GetDataAsync<T>(url, queries, session, cancellationToken).ConfigureAwait(false);
         }
 
-        internal static async Task<Stream> GetDataAsync(string url, Platform? platform, IEnumerable<KeyValuePair<string, string>> queries, Session session)
+        internal static async Task<T> GetDataAsync<T>(string url,
+            Platform? platform,
+            IEnumerable<KeyValuePair<string, string>> queries,
+            Session session,
+            CancellationToken cancellationToken)
         {
             if (platform != null)
             {
@@ -35,10 +42,13 @@ namespace R6Sharp
                     url = string.Format(url, Constant.PlatformToGuid(platform ?? default));
                 }
             }
-            return await GetDataAsync(url, queries, session).ConfigureAwait(false);
+            return await GetDataAsync<T>(url, queries, session, cancellationToken).ConfigureAwait(false);
         }
 
-        private static async Task<Stream> GetDataAsync(string url, IEnumerable<KeyValuePair<string, string>> queries, Session session)
+        private static async Task<T> GetDataAsync<T>(string url,
+            IEnumerable<KeyValuePair<string, string>> queries,
+            Session session,
+            CancellationToken cancellationToken)
         {
             if (queries != null)
             {
@@ -62,64 +72,36 @@ namespace R6Sharp
                 headerValuePairs.Add(new KeyValuePair<string, string>("Ubi-SessionID", session.SessionId.ToString()));
             }
 
-            var result = await BuildRequestAsync(uri, headerValuePairs.ToArray(), null, true).ConfigureAwait(false);
-            return EnsureRequestSuccess(result);
+            return await BuildRequestAsync<T>(uri, headerValuePairs.ToArray(), null, true, cancellationToken).ConfigureAwait(false);
         }
 
-        internal static async Task<Tuple<HttpStatusCode, Stream>> BuildRequestAsync(Uri uri, KeyValuePair<string, string>[] additionalHeaderValues, string data, bool get)
+        internal static async Task<T> BuildRequestAsync<T>(Uri uri,
+            KeyValuePair<string, string>[] additionalHeaderValues,
+            string data,
+            bool get,
+            CancellationToken cancellationToken)
         {
-            // Build a web request to endpoint
-            using var request = new HttpRequestMessage()
-            {
-                RequestUri = uri,
-                Method = get ? HttpMethod.Get : HttpMethod.Post,
-                Headers =
-                {
-                    { "Ubi-AppId", Constant.Rainbow6S.ToString() },
-                    { "User-Agent", "R6Sharp/2.0" }
-                }
-            };
+            using var client = new HttpClient();
+            client.DefaultRequestHeaders.UserAgent.Clear();
+            client.DefaultRequestHeaders.UserAgent.Add(new System.Net.Http.Headers.ProductInfoHeaderValue("R6Sharp", "3.0"));
+            client.DefaultRequestHeaders.Add("Ubi-AppId", Constant.Rainbow6S.ToString());
 
             // Apply auxiliary headers supplied to method
             foreach (var additionalHeaderValue in additionalHeaderValues)
             {
-                request.Headers.Add(additionalHeaderValue.Key, additionalHeaderValue.Value);
+                client.DefaultRequestHeaders.Add(additionalHeaderValue.Key, additionalHeaderValue.Value);
             }
 
-            if (data != null && request.Method == HttpMethod.Post)
+            if (get)
             {
-                request.Content = new StringContent(data, Encoding.UTF8, MediaTypeNames.Application.Json);
-            }
-
-            var client = new HttpClient();
-            var response = await client.SendAsync(request).ConfigureAwait(false);
-            response = response.EnsureSuccessStatusCode();
-            var content = response.Content;
-            var stream = await content.ReadAsStreamAsync().ConfigureAwait(false);
-            if (response.StatusCode == HttpStatusCode.NoContent || stream == null || (stream != null && stream.Length == 0))
-            {
-                return new Tuple<HttpStatusCode, Stream>(response.StatusCode, null);
+                return await client.GetFromJsonAsync<T>(uri, cancellationToken).ConfigureAwait(false);
             }
             else
             {
-                return new Tuple<HttpStatusCode, Stream>(response.StatusCode, stream);
-            }
-        }
-
-        private static Stream EnsureRequestSuccess(Tuple<HttpStatusCode, Stream> result)
-        {
-            // TO-DO: this is potentially ambiguous as only status 200 and 204 is processed and
-            // other 200 codes will be processed incorrectly
-            if (result.Item1 == HttpStatusCode.NoContent ||
-                result.Item1 == HttpStatusCode.OK)
-            {
-                // BuildRequestAsync already returns null/Stream for NoContent and OK
-                // respectively, so return as such.
-                return result.Item2;
-            }
-            else
-            {
-                throw new ApiBadResponseException($"Bad response from endpoint: status code {result.Item1}.");
+                HttpResponseMessage response = await client.PostAsJsonAsync(uri,
+                    data,
+                    cancellationToken).ConfigureAwait(false);
+                return await response.Content.ReadFromJsonAsync<T>(cancellationToken: cancellationToken);
             }
         }
 
