@@ -46,22 +46,7 @@ namespace R6Sharp
             }
 
             var uri = new Uri(url);
-            // Add authorization header with ticket (may be null, for requests that are static)
-            var headers = new List<KeyValuePair<string, IEnumerable<string>>>();
-            if (session != null)
-            {
-                headers.Add(new KeyValuePair<string, IEnumerable<string>>(
-                    "Authorization",
-                    new string[] { $"Ubi_v1 t={session.Ticket}" }));
-                headers.Add(new KeyValuePair<string, IEnumerable<string>>(
-                    "Expiration",
-                    new string[] { session.Expiration.ToString("O") }));
-                headers.Add(new KeyValuePair<string, IEnumerable<string>>(
-                    "Ubi-SessionID",
-                    new string[] { session.SessionId.ToString() }));
-            }
-
-            using var client = R6Api.GetApiClient(headers);
+            using var client = R6Api.GetApiClient(session, null);
             return await client.GetFromJsonAsync<T>(uri, cancellationToken).ConfigureAwait(false);
         }
 

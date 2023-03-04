@@ -1,7 +1,9 @@
 ﻿using R6Sharp.Endpoint;
+using R6Sharp.Response;
 using System;
 using System.Collections.Generic;
 using System.Net.Http;
+using System.Net.Http.Headers;
 
 namespace R6Sharp
 {
@@ -118,14 +120,27 @@ namespace R6Sharp
         public static HttpClient GetApiClient(IEnumerable<KeyValuePair<string, IEnumerable<string>>> headers)
         {
             var client = new HttpClient();
-            client.DefaultRequestHeaders.UserAgent.Add(new System.Net.Http.Headers.ProductInfoHeaderValue("R6Sharp", "3.0"));
+            client.DefaultRequestHeaders.UserAgent.Add(new ProductInfoHeaderValue("R6Sharp", "3.0"));
             client.DefaultRequestHeaders.Add("Ubi-AppId", Constant.Rainbow6S.ToString());
 
             // Apply auxiliary headers supplied to method
-            foreach (KeyValuePair<string, IEnumerable<string>> header in headers)
+            if (headers != null)
             {
-                client.DefaultRequestHeaders.Add(header.Key, header.Value);
+                foreach (KeyValuePair<string, IEnumerable<string>> header in headers)
+                {
+                    client.DefaultRequestHeaders.Add(header.Key, header.Value);
+                }
             }
+
+            return client;
+        }
+
+        public static HttpClient GetApiClient(Session session, IEnumerable<KeyValuePair<string, IEnumerable<string>>> headers)
+        {
+            HttpClient client = GetApiClient(headers);
+            client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Ubi_v1", $"t={session.Ticket}");
+            client.DefaultRequestHeaders.Add("Expiration", session.Expiration.ToString("O"));
+            client.DefaultRequestHeaders.Add("Ubi-SessionID", session.SessionId.ToString());
 
             return client;
         }
