@@ -38,14 +38,6 @@ namespace R6Sharp.Endpoint
 
         public async Task<Session> GetCurrentSessionAsync(CancellationToken cancellationToken = default)
         {
-            // refresh ticket state
-            await GetTicketAsync(cancellationToken).ConfigureAwait(false);
-
-            return _currentSession;
-        }
-
-        public async Task<string> GetTicketAsync(CancellationToken cancellationToken = default)
-        {
             var sessionFileName = "session.json";
             var now = DateTime.UtcNow;
             var requestNewSession = false;
@@ -104,7 +96,7 @@ namespace R6Sharp.Endpoint
                     cancellationToken: cancellationToken).ConfigureAwait(false);
             }
 
-            return _currentSession.Ticket;
+            return _currentSession;
         }
 
         private bool ValidateSession(DateTime nowUtc, DateTime expirationUtc)

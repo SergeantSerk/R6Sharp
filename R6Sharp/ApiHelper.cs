@@ -98,8 +98,9 @@ namespace R6Sharp
             }
             else
             {
-                HttpResponseMessage response = await client.PostAsJsonAsync(uri,
-                    data,
+                var content = new StringContent(data, Encoding.UTF8, MediaTypeNames.Application.Json);
+                HttpResponseMessage response = await client.PostAsync(uri,
+                    content,
                     cancellationToken).ConfigureAwait(false);
                 return await response.Content.ReadFromJsonAsync<T>(cancellationToken: cancellationToken);
             }
