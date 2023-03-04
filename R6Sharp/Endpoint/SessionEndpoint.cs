@@ -3,6 +3,9 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Net;
+using System.Net.Http;
+using System.Net.Http.Json;
+using System.Net.Mime;
 using System.Text;
 using System.Text.Json;
 using System.Threading;
@@ -10,6 +13,16 @@ using System.Threading.Tasks;
 
 namespace R6Sharp.Endpoint
 {
+    internal class SessionPayload
+    {
+        public bool RememberMe;
+
+        public SessionPayload(bool rememberMe)
+        {
+            RememberMe = rememberMe;
+        }
+    }
+
     public class SessionEndpoint
     {
         /// <summary>
@@ -109,21 +122,23 @@ namespace R6Sharp.Endpoint
 
         private async Task<Session> GetSessionAsync(CancellationToken cancellationToken = default)
         {
-            // Build json for remembering (or not) the user/session
-            var data = $"{{\"rememberMe\": {(RememberMe ? "true" : "false")}}}";
             // Add authorization header
-            var headervaluepairs = new[]
+            var headers = new List<KeyValuePair<string, IEnumerable<string>>>
             {
-                new KeyValuePair<string, string>(HttpRequestHeader.Authorization.ToString(), $"Basic {_credentialsb64}")
+                new KeyValuePair<string, IEnumerable<string>>(
+                    HttpRequestHeader.Authorization.ToString(),
+                    new string[] { $"Basic {_credentialsb64}" })
             };
 
             // Get result from endpoint
+            using HttpClient client = R6Api.GetApiClient(headers);
             var endpoint = new Uri(Endpoints.UbiServices.Sessions);
-            return await ApiHelper.BuildRequestAsync<Session>(endpoint,
-                headervaluepairs,
+            var data = new SessionPayload(RememberMe);
+            HttpResponseMessage response = await client.PostAsJsonAsync(endpoint,
                 data,
-                false,
                 cancellationToken).ConfigureAwait(false);
+
+            return await response.Content.ReadFromJsonAsync<Session>(cancellationToken: cancellationToken);
         }
     }
 }

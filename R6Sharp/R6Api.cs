@@ -1,6 +1,7 @@
 ﻿using R6Sharp.Endpoint;
 using System;
 using System.Collections.Generic;
+using System.Net.Http;
 
 namespace R6Sharp
 {
@@ -113,5 +114,20 @@ namespace R6Sharp
             PlayerStatisticsEndpoint = new PlayerStatisticsEndpoint(Session);
         }
         #endregion
+
+        public static HttpClient GetApiClient(IEnumerable<KeyValuePair<string, IEnumerable<string>>> headers)
+        {
+            var client = new HttpClient();
+            client.DefaultRequestHeaders.UserAgent.Add(new System.Net.Http.Headers.ProductInfoHeaderValue("R6Sharp", "3.0"));
+            client.DefaultRequestHeaders.Add("Ubi-AppId", Constant.Rainbow6S.ToString());
+
+            // Apply auxiliary headers supplied to method
+            foreach (KeyValuePair<string, IEnumerable<string>> header in headers)
+            {
+                client.DefaultRequestHeaders.Add(header.Key, header.Value);
+            }
+
+            return client;
+        }
     }
 }

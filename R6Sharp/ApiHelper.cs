@@ -13,16 +13,6 @@ namespace R6Sharp
     internal static class ApiHelper
     {
         internal static async Task<T> GetDataAsync<T>(string url,
-            Guid player,
-            IEnumerable<KeyValuePair<string, string>> queries,
-            Session session,
-            CancellationToken cancellationToken = default)
-        {
-            url = string.Format(url, player.ToString());
-            return await GetDataAsync<T>(url, queries, session, cancellationToken).ConfigureAwait(false);
-        }
-
-        internal static async Task<T> GetDataAsync<T>(string url,
             Platform? platform,
             IEnumerable<KeyValuePair<string, string>> queries,
             Session session,
@@ -42,14 +32,7 @@ namespace R6Sharp
                     url = string.Format(url, Constant.PlatformToGuid(platform ?? default));
                 }
             }
-            return await GetDataAsync<T>(url, queries, session, cancellationToken).ConfigureAwait(false);
-        }
 
-        private static async Task<T> GetDataAsync<T>(string url,
-            IEnumerable<KeyValuePair<string, string>> queries,
-            Session session,
-            CancellationToken cancellationToken)
-        {
             if (queries != null)
             {
                 // TO-DO: find a better, more secure way of doing this
@@ -64,46 +47,22 @@ namespace R6Sharp
 
             var uri = new Uri(url);
             // Add authorization header with ticket (may be null, for requests that are static)
-            var headerValuePairs = new List<KeyValuePair<string, string>>();
+            var headers = new List<KeyValuePair<string, IEnumerable<string>>>();
             if (session != null)
             {
-                headerValuePairs.Add(new KeyValuePair<string, string>("Authorization", $"Ubi_v1 t={session.Ticket}"));
-                headerValuePairs.Add(new KeyValuePair<string, string>("Expiration", session.Expiration.ToString("O")));
-                headerValuePairs.Add(new KeyValuePair<string, string>("Ubi-SessionID", session.SessionId.ToString()));
+                headers.Add(new KeyValuePair<string, IEnumerable<string>>(
+                    "Authorization",
+                    new string[] { $"Ubi_v1 t={session.Ticket}" }));
+                headers.Add(new KeyValuePair<string, IEnumerable<string>>(
+                    "Expiration",
+                    new string[] { session.Expiration.ToString("O") }));
+                headers.Add(new KeyValuePair<string, IEnumerable<string>>(
+                    "Ubi-SessionID",
+                    new string[] { session.SessionId.ToString() }));
             }
 
-            return await BuildRequestAsync<T>(uri, headerValuePairs.ToArray(), null, true, cancellationToken).ConfigureAwait(false);
-        }
-
-        internal static async Task<T> BuildRequestAsync<T>(Uri uri,
-            KeyValuePair<string, string>[] additionalHeaderValues,
-            string data,
-            bool get,
-            CancellationToken cancellationToken)
-        {
-            using var client = new HttpClient();
-            client.DefaultRequestHeaders.UserAgent.Clear();
-            client.DefaultRequestHeaders.UserAgent.Add(new System.Net.Http.Headers.ProductInfoHeaderValue("R6Sharp", "3.0"));
-            client.DefaultRequestHeaders.Add("Ubi-AppId", Constant.Rainbow6S.ToString());
-
-            // Apply auxiliary headers supplied to method
-            foreach (var additionalHeaderValue in additionalHeaderValues)
-            {
-                client.DefaultRequestHeaders.Add(additionalHeaderValue.Key, additionalHeaderValue.Value);
-            }
-
-            if (get)
-            {
-                return await client.GetFromJsonAsync<T>(uri, cancellationToken).ConfigureAwait(false);
-            }
-            else
-            {
-                var content = new StringContent(data, Encoding.UTF8, MediaTypeNames.Application.Json);
-                HttpResponseMessage response = await client.PostAsync(uri,
-                    content,
-                    cancellationToken).ConfigureAwait(false);
-                return await response.Content.ReadFromJsonAsync<T>(cancellationToken: cancellationToken);
-            }
+            using var client = R6Api.GetApiClient(headers);
+            return await client.GetFromJsonAsync<T>(uri, cancellationToken).ConfigureAwait(false);
         }
 
         internal static string DeriveGamemodeFlags(Gamemode gamemode)
